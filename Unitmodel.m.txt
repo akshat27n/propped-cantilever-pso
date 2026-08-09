@@ -1,0 +1,47 @@
+function [fit_val, qx, qy] = unit_model_propped(vars, a_pos)
+global leng thic wid E F0 M0 fai numbs
+
+Qx_guess = vars(1);
+Qy_guess = vars(2);
+thetaL_guess = vars(3);
+R_react = vars(4); % Reaction force at roller
+
+delta_l = leng / numbs;
+qx = zeros(1, numbs + 1);
+qy = zeros(1, numbs + 1);
+theta = zeros(1, numbs + 1);
+
+y_at_prop = 0;
+prop_idx = round((a_pos/leng) * numbs);
+
+for i = 1:numbs
+    % Moment from Tip Force (Eq 7 from paper logic)
+    M_tip = F0*sin(fai)*(Qx_guess - qx(i)) - F0*cos(fai)*(Qy_guess - qy(i));
+
+    % Moment from Roller Reaction (Only if current segment is between base and roller)
+    M_prop = 0;
+    if i <= prop_idx
+        M_prop = R_react * (a_pos - qx(i)); 
+    end
+
+    M_total = M_tip + M_prop + M0;
+
+    Ili = (wid(i) * thic^3) / 12;
+    delta_theta = (M_total * delta_l) / (E * Ili);
+
+    theta(i+1) = theta(i) + delta_theta;
+    qx(i+1) = qx(i) + delta_l * cos(theta(i));
+    qy(i+1) = qy(i) + delta_l * sin(theta(i));
+
+    if i == prop_idx
+        y_at_prop = qy(i+1);
+    end
+end
+
+% Fitness: Error in Tip position + Error in Tip slope + Error at Roller support
+dist_err = sqrt((Qx_guess - qx(end))^2 + (Qy_guess - qy(end))^2) / leng;
+slope_err = abs(thetaL_guess - theta(end)) / (2 * pi);
+prop_err = abs(y_at_prop) / leng; % Beam must be at y=0 at the roller
+
+fit_val = dist_err + slope_err + prop_err;
+end

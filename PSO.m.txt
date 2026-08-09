@@ -1,0 +1,32 @@
+function [gbest_params, gbest_fit] = PSO_propped(N, c1, c2, wmax, wmin, max_step, vd, xL, a_pos)
+pos = zeros(N, vd);
+vel = zeros(N, vd);
+for d = 1:vd
+    pos(:,d) = xL(d,1) + (xL(d,2) - xL(d,1)) * rand(N,1);
+end
+
+pbest_pos = pos;
+pbest_fit = inf(N, 1);
+
+for t = 1:max_step
+    for i = 1:N
+        fit = unit_model_propped(pos(i,:), a_pos);
+        if fit < pbest_fit(i)
+            pbest_fit(i) = fit;
+            pbest_pos(i,:) = pos(i,:);
+        end
+    end
+    [gbest_fit, idx] = min(pbest_fit);
+    gbest_params = pbest_pos(idx, :);
+
+    % Update velocities and positions
+    w = wmax - (wmax-wmin)*t/max_step; % Linear decrease inertia
+    vel = w*vel + c1*rand(N,vd).*(pbest_pos - pos) + c2*rand(N,vd).*(gbest_params - pos);
+    pos = pos + vel;
+
+    % Boundary constraint
+    for d = 1:vd
+        pos(:,d) = max(min(pos(:,d), xL(d,2)), xL(d,1));
+    end
+end
+end

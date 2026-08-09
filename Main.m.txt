@@ -1,0 +1,36 @@
+clear; clc; close all;
+global leng thic wid E F0 M0 fai numbs
+
+% Beam Properties
+leng = 180e-3; thic = 1.15e-3; E = 45.36e9; numbs = 200;
+wid = ones(1, numbs) * 25e-3;
+
+% Load (High load to see large deflection)
+F0 = 15; fai = -pi/2; M0 = 0;
+
+% Slider (Roller) positions: 100mm
+a_vals = 100e-3;
+colors = {'r'};
+
+figure('Color', 'w'); hold on;
+for k = 1
+    a_pos = a_vals(k);
+
+    % Search ranges: [Qx; Qy; theta0; RollerReactionForce]
+    xL = [0.05, 0.20; -0.15, 0.10; -pi, pi; -200, 200]; 
+
+    fprintf('Optimizing for Slider at %.0f mm...\n', a_pos*1000);
+    [best_vars, ~] = PSO_propped(100, 0.2, 0.2, 0.8, 0.6, 100, 4, xL, a_pos);
+
+    [~, qx, qy] = unit_model_propped(best_vars, a_pos);
+
+    plot(qx*1000, qy*1000, colors{k}, 'LineWidth', 2, ...
+        'DisplayName', ['Slider at ', num2str(a_pos*1000), 'mm']);
+    plot(a_pos*1000, 0, [colors{k} 'o'], 'MarkerFaceColor', colors{k}, 'HandleVisibility', 'off');
+end
+
+plot(0,0,'ks','MarkerFaceColor','k','DisplayName','Fixed Base');
+yline(0, 'k--'); % Undeformed line
+grid on; axis equal; xlabel('X (mm)'); ylabel('Y (mm)');
+legend('Location', 'southwest');
+title('Large Deflection: Propped Cantilever with Variable Slider');
